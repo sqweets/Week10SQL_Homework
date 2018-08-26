@@ -32,7 +32,7 @@ SELECT last_name, COUNT(last_name) AS cnt FROM actor GROUP BY last_name HAVING c
 UPDATE actor SET first_name = 'HARPO' WHERE first_name = 'GROUCHO' AND last_name = 'WILLIAMS';
 
 # 4d
-UPDATE actor SET first_name = 'GROUCHO' WHERE first_name = 'HARPO';
+UPDATE actor SET first_name = 'GROUCHO' WHERE first_name = 'HARPO' AND last_name = 'WILLIAMS';
 
 # 5a
 SHOW CREATE TABLE address;
@@ -64,22 +64,21 @@ INNER JOIN film
 ON film.film_id = inventory.film_id
 WHERE film.title = 'Hunchback Impossible';
 
-# 6e (not working)
+# 6e
+SELECT customer.first_name, customer.last_name,  SUM(payment.amount) AS Total
+FROM payment
+INNER JOIN customer
+ON payment.customer_id = customer.customer_id
+GROUP BY payment.customer_id
+ORDER BY customer.last_name ASC;
 
-
-# 7a (not working)
-SELECT title, language_id
-FROM film
-WHERE language_id IN (SELECT langusge_id FROM language)
-WHERE title IN
-(SELECT title FROM film WHERE (title LIKE 'K%' OR title LIKE 'Q%)'))
-WHERE language_id IN
-(SELECT language_id, `name` FROM `language` WHERE `name` = 'English');
-
-
-AND WHERE film.language_id IN (SELECT language.language_id, `name` from `language` WHERE name = 'English');
-
-
+# 7a
+SELECT title FROM film
+    WHERE language_id in
+        (SELECT language_id
+        FROM language
+        WHERE name = "English" )
+    AND (title LIKE "K%") OR (title LIKE "Q%");
         
 # 7b
 SELECT first_name, last_name
@@ -96,19 +95,16 @@ FROM actor
 # 7c
 SELECT first_name, last_name, email
 FROM customer
-    WHERE address_id IN
-        (SELECT address_id 
-        FROM address 
-        WHERE city_id IN 
-            (SELECT city_id
-            FROM city 
-            WHERE country_id IN
-                (SELECT country_id
-                FROM country 
-                WHERE country = 'Canada')));
+    INNER JOIN address
+        ON customer.address_id = address.address_id
+    INNER JOIN city
+        ON address.city_id = city.city_id
+    INNER JOIN country
+        ON city.country_id = country.country_id
+    WHERE country.country_id = 20;
                 
 # 7d
-SELECT `title`
+SELECT title
 FROM film
     WHERE film_id IN
         (SELECT film_id 
@@ -117,6 +113,79 @@ FROM film
             (SELECT category_id
             FROM category 
             WHERE name = 'Family'));
+
+# 7e
+SELECT title,
+(SELECT COUNT(*) 
+FROM rental 
+WHERE rental.inventory_id IN
+    (SELECT inventory_id
+    FROM inventory
+    WHERE inventory.film_id = film.film_id)) AS Rentals
+FROM film
+ORDER BY Rentals DESC;
+
+# 7f
+SELECT store_id,
+(SELECT SUM(amount) 
+FROM payment 
+WHERE customer_id IN
+    (SELECT customer_id
+    FROM customer
+    WHERE customer.store_id = store.store_id)) AS 'Business in Dollars'
+FROM store;
+
+# 7g
+SELECT store.store_id, city.city, country.country
+FROM store
+    INNER JOIN address
+        ON store.address_id = address.address_id
+    INNER JOIN city
+        ON address.city_id = city.city_id
+    INNER JOIN country
+        ON city.country_id = country.country_id;
+
+# 7h
+SELECT category.name AS Genre, SUM(payment.amount) AS Revenue
+FROM film
+    INNER JOIN inventory
+        ON film.film_id = inventory.film_id
+    INNER JOIN rental
+        ON inventory.inventory_id = rental.inventory_id
+    INNER JOIN payment
+        ON rental.rental_id = payment.rental_id
+    INNER JOIN film_category
+        ON film.film_id = film_category.film_id
+    INNER JOIN category
+        ON film_category.category_id = category.category_id
+    GROUP BY category.name
+    ORDER BY revenue DESC LIMIT 5;
+
+# 8a
+CREATE VIEW revenue_by_genre AS
+SELECT category.name AS Genre, SUM(payment.amount) AS Revenue
+FROM film
+    INNER JOIN inventory
+        ON film.film_id = inventory.film_id
+    INNER JOIN rental
+        ON inventory.inventory_id = rental.inventory_id
+    INNER JOIN payment
+        ON rental.rental_id = payment.rental_id
+    INNER JOIN film_category
+        ON film.film_id = film_category.film_id
+    INNER JOIN category
+        ON film_category.category_id = category.category_id
+    GROUP BY category.name
+    ORDER BY revenue DESC LIMIT 5;
+
+# 8b
+# I'm not sure what the question is asking.  If it's about what an executive would want to see, well
+# I would think they would want it updated every x hours or days, etc, so they can act on what the data is
+# telling them.  I would also think things like # of movies in inventory for the top genres, the rental prices for those
+# movies, how frequently they are rented, etc. would be useful.
+
+# 8c
+DROP VIEW IF EXISTS revenue_by_genre;
 
 
 
